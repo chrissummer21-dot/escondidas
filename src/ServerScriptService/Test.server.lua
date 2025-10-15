@@ -1,0 +1,1 @@
+print("¡El script funciona! Se ha conectado desde VS Code.")
