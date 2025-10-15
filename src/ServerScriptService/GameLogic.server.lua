@@ -13,25 +13,14 @@ local adminStatusEvent = Instance.new("RemoteEvent")
 adminStatusEvent.Name = "AdminStatusEvent"
 adminStatusEvent.Parent = ReplicatedStorage
 
+-- Esta es la ÚNICA y correcta función onPlayerAdded
 local function onPlayerAdded(player)
     print(player.Name .. " ha entrado al juego.")
 
     if AdminService.isAdmin(player) then
         print("¡" .. player.Name .. " es un administrador!")
-        -- Le enviamos una señal a ESTE jugador específico para decirle que es admin
+        -- Le enviamos la señal a ESTE jugador específico para decirle que es admin
         adminStatusEvent:FireClient(player, true) 
-    else
-        print(player.Name .. " es un jugador normal.")
-    end
-end
-
--- Esta función se ejecuta CADA VEZ que un nuevo jugador entra al juego
-local function onPlayerAdded(player)
-    print(player.Name .. " ha entrado al juego.")
-
-    -- Usamos nuestra función del módulo para revisar si es admin
-    if AdminService.isAdmin(player) then
-        print("¡" .. player.Name .. " es un administrador!")
     else
         print(player.Name .. " es un jugador normal.")
     end
@@ -39,15 +28,13 @@ end
 
 -- Esta función se ejecuta UNA SOLA VEZ cuando CUALQUIER jugador chatea
 local function onPlayerChatted(player, message)
-    -- Convertimos el mensaje a minúsculas para que el comando no distinga mayúsculas
+    -- Convertimos el mensaje a minúsculas
     local lowerMessage = string.lower(message)
 
     -- Creamos un comando de admin: "/setseeker [nombre]"
-    -- El símbolo ^ se asegura que el comando esté al inicio del mensaje
     if lowerMessage:find("^/setseeker ") then
-        -- Primero, validamos si el que escribió el comando es admin
+        -- Validamos si el que escribió el comando es admin
         if AdminService.isAdmin(player) then
-            -- Extraemos el nombre del jugador del comando (el texto después del espacio)
             local targetName = message:sub(12)
             local targetPlayer = Players:FindFirstChild(targetName)
 
@@ -64,12 +51,11 @@ local function onPlayerChatted(player, message)
 end
 
 -- ==================================================================
--- CONEXIONES DE EVENTOS (La parte más importante)
+-- CONEXIONES DE EVENTOS
 -- ==================================================================
 
 -- Conectamos la función onPlayerAdded al evento global de entrada de jugadores
 Players.PlayerAdded:Connect(onPlayerAdded)
 
--- Conectamos la función onPlayerChatted al evento global del chat.
--- Esta es la línea que corrige el error.
+-- Conectamos la función onPlayerChatted al evento global del chat
 Players.PlayerChatted:Connect(onPlayerChatted)
