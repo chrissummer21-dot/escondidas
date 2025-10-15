@@ -12,30 +12,40 @@ local DEFAULT_WALKSPEED = 16
 local SEEKER_WALKSPEED = 22
 
 -- ==================================================================
--- >> NUEVO: Función auxiliar para crear objetos de forma segura
+-- >> MÉTODO DE INICIALIZACIÓN MÁS SEGURO
 -- ==================================================================
+-- Esta función busca o crea un objeto, pero NO le asigna un padre.
+-- Esto previene el error de "re-entrancy" al evitar bucles de eventos.
 local function getOrCreate(className, name)
 	local instance = ReplicatedStorage:FindFirstChild(name)
 	if not instance or not instance:IsA(className) then
 		if instance then instance:Destroy() end
 		instance = Instance.new(className)
 		instance.Name = name
-		instance.Parent = ReplicatedStorage
 	end
 	return instance
 end
 
--- VALORES REPLICADOS (Ahora usando la nueva función)
+-- VALORES Y EVENTOS
+-- Primero los creamos o los encontramos sin asignarles un padre
 local gameState = getOrCreate("StringValue", "GameState")
 local gameTimer = getOrCreate("NumberValue", "GameTimer")
 local playersFound = getOrCreate("NumberValue", "PlayersFound")
 local totalPlayersInRound = getOrCreate("NumberValue", "TotalPlayersInRound")
-
--- EVENTOS DE COMUNICACIÓN
 local adminStatusEvent = getOrCreate("RemoteEvent", "AdminStatusEvent")
 local startGameEvent = getOrCreate("RemoteEvent", "StartGameEvent")
 local gameEndEvent = getOrCreate("RemoteEvent", "GameEndEvent")
 local announceSeekerEvent = getOrCreate("RemoteEvent", "AnnounceSeekerEvent")
+
+-- Ahora, asignamos el padre a todos al mismo tiempo
+gameState.Parent = ReplicatedStorage
+gameTimer.Parent = ReplicatedStorage
+playersFound.Parent = ReplicatedStorage
+totalPlayersInRound.Parent = ReplicatedStorage
+adminStatusEvent.Parent = ReplicatedStorage
+startGameEvent.Parent = ReplicatedStorage
+gameEndEvent.Parent = ReplicatedStorage
+announceSeekerEvent.Parent = ReplicatedStorage
 -- ==================================================================
 
 -- VARIABLES DE ESTADO DEL JUEGO
@@ -45,7 +55,7 @@ local foundPlayerUserIds = {}
 local seekerTouchedConnections = {}
 local currentSeeker = nil
 
--- LÓGICA PRINCIPAL (sin cambios)
+-- LÓGICA PRINCIPAL
 local function endGame(reason, survivors)
 	if not gameInProgress then return end
 	print("El juego ha terminado. Razón: " .. reason)
@@ -96,7 +106,6 @@ local function startGame(seekerPlayer)
 	gameInProgress = true
 	currentSeeker = seekerPlayer
 
-	gameState.Value = "Intermission" -- Aseguramos estado inicial
 	table.clear(playersInRound)
 	for _, player in ipairs(Players:GetPlayers()) do
 		table.insert(playersInRound, player.UserId)
@@ -141,7 +150,7 @@ local function startGame(seekerPlayer)
 	end
 end
 
--- MANEJO DE EVENTOS (sin cambios)
+-- MANEJO DE EVENTOS
 local function onPlayerAdded(player)
     if AdminService.isAdmin(player) then
         adminStatusEvent:FireClient(player, true) 
@@ -159,19 +168,18 @@ local function onPlayerRemoving(player)
 	if wasFound then
 		local foundIndex = table.find(foundPlayerUserIds, player.UserId)
 		if foundIndex then table.remove(foundPlayerUserIds, foundIndex) end
-		playersFound.Value -= 1
+		-- >> CORREGIDO: Si un jugador encontrado se va, el número de encontrados no cambia
 	end
 	
 	totalPlayersInRound.Value -= 1
 	
-	if gameInProgress and playersFound.Value >= totalPlayersInRound.Value - 1 then
+	if gameInProgress and playersFound.Value >= totalPlayersInRound.Value - 1 and totalPlayersInRound.Value > 1 then
 		endGame("SeekerWins", {})
 	end
 end
 
 startGameEvent.OnServerEvent:Connect(function(adminPlayer, seekerPlayer)
 	if not AdminService.isAdmin(adminPlayer) then return end
-	-- Ponemos el estado en Intermission antes de empezar para limpiar las GUIs
 	gameState.Value = "Intermission" 
 	task.spawn(startGame, seekerPlayer)
 end)
