@@ -3,7 +3,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
-
+local startGameEvent = ReplicatedStorage:WaitForChild("StartGameEvent")
 -- ==================================================================
 -- CREACIÓN DE LA INTERFAZ (Sin cambios aquí)
 -- ==================================================================
@@ -162,9 +162,12 @@ end)
 -- Evento al hacer clic en Iniciar Juego
 startGameButton.MouseButton1Click:Connect(function()
 	if not startGameButton.Active or not selectedPlayer then return end
-	print("Iniciando juego! El buscador es: " .. selectedPlayer.Name)
-	-- TODO: Enviar evento al servidor para iniciar el juego
-	screenGui.Enabled = false
+
+	print("Enviando señal al servidor para iniciar. Buscador: " .. selectedPlayer.Name)
+	-- Enviamos el jugador seleccionado al servidor
+	startGameEvent:FireServer(selectedPlayer)
+	
+	screenGui.Enabled = false -- Ocultamos la GUI
 end)
 
 -- Finalmente, ponemos la GUI construida en la interfaz del jugador
